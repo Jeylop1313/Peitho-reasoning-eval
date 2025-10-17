@@ -9,9 +9,9 @@ import json
 from typing import Any, Optional, cast
 
 import aiohttp
-from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg
+from langchain_tavily import TavilySearch
 from langgraph.prebuilt import InjectedState
 from typing_extensions import Annotated
 
@@ -29,7 +29,7 @@ async def search(
     for answering questions about current events. Provide as much context in the query as needed to ensure high recall.
     """
     configuration = Configuration.from_runnable_config(config)
-    wrapped = TavilySearchResults(max_results=configuration.max_search_results)
+    wrapped = TavilySearch(max_results=configuration.max_search_results)
     result = await wrapped.ainvoke({"query": query})
     return cast(list[dict[str, Any]], result)
 
