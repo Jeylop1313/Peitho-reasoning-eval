@@ -5,6 +5,8 @@ from langsmith import unit
 
 from enrichment_agent import graph
 
+pytestmark = pytest.mark.anyio
+
 
 @pytest.fixture(scope="function")
 def extraction_schema() -> Dict[str, Any]:
@@ -29,7 +31,6 @@ def extraction_schema() -> Dict[str, Any]:
     }
 
 
-@pytest.mark.asyncio
 @unit
 async def test_researcher_simple_runthrough(extraction_schema: Dict[str, Any]) -> None:
     res = await graph.ainvoke(
@@ -85,7 +86,6 @@ def array_extraction_schema() -> Dict[str, Any]:
     }
 
 
-@pytest.mark.asyncio
 @unit
 async def test_researcher_list_type(array_extraction_schema: Dict[str, Any]) -> None:
     res = await graph.ainvoke(

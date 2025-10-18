@@ -15,7 +15,7 @@ class Configuration:
     """The configuration for the agent."""
 
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="anthropic/claude-3-5-sonnet-20240620",
+        default="anthropic/claude-haiku-4-5-20251001",
         metadata={
             "description": "The name of the language model to use for the agent. "
             "Should be in the form: provider/model-name."
@@ -31,7 +31,7 @@ class Configuration:
     )
 
     max_search_results: int = field(
-        default=10,
+        default=5,
         metadata={
             "description": "The maximum number of search results to return for each search query."
         },
