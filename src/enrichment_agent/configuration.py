@@ -1,53 +1,52 @@
-"""Define the configurable parameters for the agent."""
+"""Los parámetros técnicos del Agente."""
 
 from __future__ import annotations
-
 from dataclasses import dataclass, field, fields
 from typing import Annotated, Optional
-
 from langchain_core.runnables import RunnableConfig, ensure_config
-
 from enrichment_agent import prompts
-
 
 @dataclass(kw_only=True)
 class Configuration:
-    """The configuration for the agent."""
+    """Configuración técnica para la calibración del agente."""
 
+    # --- Selección de Modelo ---
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="anthropic/claude-haiku-4-5-20251001",
+        default="gemini-2.5-flash-lite", 
         metadata={
-            "description": "The name of the language model to use for the agent. "
-            "Should be in the form: provider/model-name."
+            "description": "El modelo de Gemini a usar. Se recomienda gemini-1.5-flash para velocidad y costo."
         },
     )
 
+    model_provider: str = field(
+        default="google_genai",
+        metadata={
+            "description": "El proveedor del modelo. Usar 'google_genai' para Google AI Studio (gratuito)."
+        },
+    )
+
+    # --- El Lente Teórico (El Prompt) ---
+    # Apunta al prompt que operacionaliza el SEC 1 de Scherer.
     prompt: str = field(
         default=prompts.MAIN_PROMPT,
         metadata={
-            "description": "The main prompt template to use for the agent's interactions. "
-            "Expects two f-string arguments: {info} and {topic}."
+            "description": "Plantilla que guía los pasos del SEC 1 (Novedad, Agrado, Metas)."
         },
     )
 
+    # --- Límites de Herramientas ---
     max_search_results: int = field(
-        default=5,
-        metadata={
-            "description": "The maximum number of search results to return for each search query."
-        },
-    )
-
-    max_info_tool_calls: int = field(
         default=3,
         metadata={
-            "description": "The maximum number of times the Info tool can be called during a single interaction."
+            "description": "Máximo de evidencias externas para validar la Predictibilidad."
         },
     )
 
+    # --- Robustez vs. Economía de Procesamiento ---
     max_loops: int = field(
-        default=6,
+        default=4,
         metadata={
-            "description": "The maximum number of interaction loops allowed before the agent terminates."
+            "description": "Límite de intentos para alcanzar el Cierre (Closure) en el peritaje."
         },
     )
 
@@ -55,7 +54,7 @@ class Configuration:
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None
     ) -> Configuration:
-        """Load configuration w/ defaults for the given invocation."""
+        """Carga la configuración técnica para la ejecución actual."""
         config = ensure_config(config)
         configurable = config.get("configurable") or {}
         _fields = {f.name for f in fields(cls) if f.init}

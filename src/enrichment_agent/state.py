@@ -1,88 +1,74 @@
-"""State definitions.
-
-State is the interface between the graph and end user as well as the
-data model used internally by the graph.
-"""
-
-import operator
+import json
 from dataclasses import dataclass, field
-from typing import Annotated, Any, List, Optional
-
+from typing import Any, Dict, List, Optional, Annotated, Literal, Union
 from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
+from pydantic import BaseModel, Field
 
+# --- 1. EL FORMULARIO DE EVALUACIÓN (SEC 1 - Scherer) ---
+# Registro del Perfil Psicológico basado en la subjetividad del Avatar.
+
+class SEC1_Registry(BaseModel):
+    """Diagnóstico del Perfil Psicológico: Evaluación de Relevancia."""
+    
+    # NOVEDAD
+    novedad_categoria: Literal["Rutinario", "Inesperado", "Abrupto", "Familiar"] = Field(
+        ..., description="Categoría rápida sobre la sorpresa del mensaje."
+    )
+    novedad_razonamiento: str = Field(
+        ..., description="Explicación humana de por qué se siente así para el avatar."
+    )
+    
+    # AGRADO
+    agrado_categoria: Literal["Agradable", "Neutral", "Desagradable", "Indignante"] = Field(
+        ..., description="Veredicto sobre el tono emocional del lenguaje."
+    )
+    agrado_razonamiento: str = Field(
+        ..., description="Análisis del léxico y la carga emocional desde la perspectiva del sujeto."
+    )
+    
+    # PREDICTIBILIDAD (Corazón del Sarcasmo)
+    predictibilidad_categoria: Literal["Lógico", "Incongruente", "Absurdo", "Predecible"] = Field(
+        ..., description="¿Tiene sentido lo que dice o rompe la realidad social del avatar?"
+    )
+    predictibilidad_razonamiento: str = Field(
+        ..., description="Choque entre lo dicho y el conocimiento del mundo que tiene el sujeto."
+    )
+    
+    # RELEVANCIA
+    relevancia_categoria: Literal["Crítico", "Importante", "Irrelevante", "Tangencial"] = Field(
+        ..., description="Impacto del mensaje en la vida o intereses del avatar."
+    )
+    relevancia_razonamiento: str = Field(
+        ..., description="Justificación de por qué este tema le importa (o no) a este perfil específico."
+    )
+    
+    # EL DIAGNÓSTICO
+    diagnostico_sarcasmo: str = Field(
+        ..., description="Veredicto final: ¿Es sarcasmo? Explica la ironía detectada de forma humana."
+    )
+
+# --- 2. CONFIGURACIÓN DE LA MENTE (Estado de Hermes) ---
 
 @dataclass(kw_only=True)
 class InputState:
-    """Input state defines the interface between the graph and the user (external API)."""
-
-    topic: str
-    "The topic for which the agent is tasked to gather information."
-
-    extraction_schema: dict[str, Any]
-    "The json schema defines the information the agent is tasked with filling out."
-
-    info: Optional[dict[str, Any]] = field(default=None)
-    "The info state tracks the current extracted data for the given topic, conforming to the provided schema. This is primarily populated by the agent."
-
-
-@dataclass(kw_only=True)
-class State(InputState):
-    """A graph's State defines three main things.
-
-    1. The structure of the data to be passed between nodes (which "channels" to read from/write to and their types)
-    2. Default values for each field
-    3. Reducers for the state's fields. Reducers are functions that determine how to apply updates to the state.
-    See [Reducers](https://langchain-ai.github.io/langgraph/concepts/low_level/#reducers) for more information.
-    """
-
-    messages: Annotated[List[BaseMessage], add_messages] = field(default_factory=list)
-    """
-    Messages track the primary execution state of the agent.
-
-    Typically accumulates a pattern of:
-
-    1. HumanMessage - user input
-    2. AIMessage with .tool_calls - agent picking tool(s) to use to collect
-        information
-    3. ToolMessage(s) - the responses (or errors) from the executed tools
-
-        (... repeat steps 2 and 3 as needed ...)
-    4. AIMessage without .tool_calls - agent responding in unstructured
-        format to the user.
-
-    5. HumanMessage - user responds with the next conversational turn.
-
-        (... repeat steps 2-5 as needed ... )
-
-    Merges two lists of messages, updating existing messages by ID.
-
-    By default, this ensures the state is "append-only", unless the
-    new message has the same ID as an existing message.
-
-    Returns:
-        A new list of messages with the messages from `right` merged into `left`.
-        If a message in `right` has the same ID as a message in `left`, the
-        message from `right` will replace the message from `left`.
-        """
-
-    loop_step: Annotated[int, operator.add] = field(default=0)
-
-    # Feel free to add additional attributes to your state as needed.
-    # Common examples include retrieved documents, extracted entities, API connections, etc.
-
+    """La 'Muestra' que entra al microscopio mental."""
+    topic: str               # El tuit o comentario
+    perfil_avatar: str       # Ej: 'Colombiano de 20 años, universitario'
+    
+    # El esquema se inyecta automáticamente para que Hermes sepa qué casillas llenar
+    extraction_schema: Dict[str, Any] = field(
+        default_factory=lambda: SEC1_Registry.model_json_schema()
+    )
 
 @dataclass(kw_only=True)
 class OutputState:
-    """The response object for the end user.
+    """Lo que Hermes nos entrega: El Perfil Psicológico terminado."""
+    info: Optional[Dict[str, Any]]
 
-    This class defines the structure of the output that will be provided
-    to the user after the graph's execution is complete.
-    """
-
-    info: dict[str, Any]
-    """
-    A dictionary containing the extracted and processed information
-    based on the user's query and the graph's execution.
-    This is the primary output of the enrichment process.
-    """
+@dataclass(kw_only=True)
+class State(InputState):
+    """El flujo de conciencia completo del agente."""
+    messages: Annotated[List[BaseMessage], add_messages]
+    info: Optional[Dict[str, Any]] = field(default=None)
+    loop_step: int = field(default=0)
