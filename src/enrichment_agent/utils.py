@@ -1,16 +1,16 @@
-"""Utility functions used in our graph."""
+"""Utility functions for model initialization and message parsing."""
 
 from typing import Optional
-
-# CAMBIO 1: Importamos la librería de Google Generative AI (Gratuita)
-# en lugar de la función genérica init_chat_model
-from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AnyMessage
 from langchain_core.runnables import RunnableConfig
 
 from enrichment_agent.configuration import Configuration
 
+load_dotenv()
 
 def get_message_text(msg: AnyMessage) -> str:
     """Get the text content of a message."""
@@ -28,11 +28,9 @@ def init_model(config: Optional[RunnableConfig] = None) -> BaseChatModel:
     """Initialize the configured chat model."""
     configuration = Configuration.from_runnable_config(config)
     
-    # CAMBIO 2: En lugar de dejar que init_chat_model decida (y falle),
-    # instanciamos directamente el modelo gratuito.
-    # Esto buscará automáticamente la variable GOOGLE_API_KEY en tu entorno.
-    
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",  # Puedes cambiarlo a "gemini-1.5-pro" si prefieres
-        temperature=0
+    return ChatGroq(
+        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        temperature=0,
+        max_tokens=2048,
+        groq_api_key=os.getenv("GROQ_API_KEY")
     )

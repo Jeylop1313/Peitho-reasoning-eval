@@ -1,0 +1,35 @@
+[
+  {
+    "index": 0,
+    "tweet_id": "801989080477154944",
+    "comment": "#ArianaGrande Ari By Ariana Grande 80% Full https://t.co/ylhCMETHHW #Singer #Actress https://t.co/lTrb1JQiEA",
+    "gold_label": "neutral",
+    "raw_response": "{\"sentiment_label\": \"neutral\"}",
+    "convergence": {
+      "sentiment_label": "neutral",
+      "reasoning": "Ablation baseline — zero-shot direct classification, no CPM pipeline."
+    }
+  },
+  {
+    "index": 1,
+    "tweet_id": "801989272341453952",
+    "comment": "Ariana Grande KIIS FM Yours Truly CD listening party in Burbank https://t.co/ClQIcx8Z6V #ArianaGrande",
+    "gold_label": "positive",
+    "raw_response": "{\"sentiment_label\": \"positive\"}",
+    "convergence": {
+      "sentiment_label": "positive",
+      "reasoning": "Ablation baseline — zero-shot direct classification, no CPM pipeline."
+    }
+  },
+  {
+    "index": 2,
+    "tweet_id": "801990978424962944",
+    "comment": "Ariana Grande White House Easter Egg Roll in Washington https://t.co/jdjL9swWM8 #ArianaGrande",
+    "gold_label": "positive",
+    "raw_response": "{\"sentiment_label\": \"neutral\"}",
+    "convergence": {
+      "sentiment_label": "neutral",
+      "reasoning": "Ablation baseline — zero-shot direct classification, no CPM pipeline."
+    }
+  }
+]

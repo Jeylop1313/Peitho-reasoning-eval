@@ -1,74 +1,97 @@
-import json
+"""
+HERMES — Data Contract (Scherer CPM)
+======================================
+Shared agent state and Convergence registry.
+
+Architecture (sequential):
+- SEC 1 Relevance    → free-text reasoning (str)
+- SEC 2 Implication  → free-text reasoning (str)
+- SEC 3 Coping       → free-text reasoning (str)
+- SEC 4 Normative    → free-text reasoning (str)
+- Convergence        → structured sentiment classifier (positive / negative / neutral)
+"""
+
+from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Annotated, Literal, Union
+from typing import Any, Dict, List, Optional, Annotated, Literal
 from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
 from pydantic import BaseModel, Field
 
-# --- 1. EL FORMULARIO DE EVALUACIÓN (SEC 1 - Scherer) ---
-# Registro del Perfil Psicológico basado en la subjetividad del Avatar.
 
-class SEC1_Registry(BaseModel):
-    """Diagnóstico del Perfil Psicológico: Evaluación de Relevancia."""
-    
-    # NOVEDAD
-    novedad_categoria: Literal["Rutinario", "Inesperado", "Abrupto", "Familiar"] = Field(
-        ..., description="Categoría rápida sobre la sorpresa del mensaje."
+# ============================================================
+# REDUCERS
+# ============================================================
+
+def add_tokens(current: int, new: int) -> int:
+    """Reducer that accumulates token counts across nodes."""
+    return current + new
+
+
+# ============================================================
+# REGISTRIES
+# ============================================================
+
+class Convergence(BaseModel):
+    """Sentiment classifier — integrates the 4 SEC reasonings into a final label."""
+    sentiment_label: Literal["positive", "negative", "neutral"] = Field(
+        ...,
+        description="Final sentiment classification derived from the integrated CPM appraisal across all 4 SECs."
     )
-    novedad_razonamiento: str = Field(
-        ..., description="Explicación humana de por qué se siente así para el avatar."
-    )
-    
-    # AGRADO
-    agrado_categoria: Literal["Agradable", "Neutral", "Desagradable", "Indignante"] = Field(
-        ..., description="Veredicto sobre el tono emocional del lenguaje."
-    )
-    agrado_razonamiento: str = Field(
-        ..., description="Análisis del léxico y la carga emocional desde la perspectiva del sujeto."
-    )
-    
-    # PREDICTIBILIDAD (Corazón del Sarcasmo)
-    predictibilidad_categoria: Literal["Lógico", "Incongruente", "Absurdo", "Predecible"] = Field(
-        ..., description="¿Tiene sentido lo que dice o rompe la realidad social del avatar?"
-    )
-    predictibilidad_razonamiento: str = Field(
-        ..., description="Choque entre lo dicho y el conocimiento del mundo que tiene el sujeto."
-    )
-    
-    # RELEVANCIA
-    relevancia_categoria: Literal["Crítico", "Importante", "Irrelevante", "Tangencial"] = Field(
-        ..., description="Impacto del mensaje en la vida o intereses del avatar."
-    )
-    relevancia_razonamiento: str = Field(
-        ..., description="Justificación de por qué este tema le importa (o no) a este perfil específico."
-    )
-    
-    # EL DIAGNÓSTICO
-    diagnostico_sarcasmo: str = Field(
-        ..., description="Veredicto final: ¿Es sarcasmo? Explica la ironía detectada de forma humana."
+    reasoning: str = Field(
+        ..., max_length=1500,
+        description="Justification connecting the 4 SEC appraisals to the final sentiment label."
     )
 
-# --- 2. CONFIGURACIÓN DE LA MENTE (Estado de Hermes) ---
+
+# ============================================================
+# STATE
+# ============================================================
 
 @dataclass(kw_only=True)
-class InputState:
-    """La 'Muestra' que entra al microscopio mental."""
-    topic: str               # El tuit o comentario
-    perfil_avatar: str       # Ej: 'Colombiano de 20 años, universitario'
-    
-    # El esquema se inyecta automáticamente para que Hermes sepa qué casillas llenar
-    extraction_schema: Dict[str, Any] = field(
-        default_factory=lambda: SEC1_Registry.model_json_schema()
-    )
+class Input:
+    """Agent input: tweet text and author context."""
+    topic: str
+    perfil_avatar: str
+
 
 @dataclass(kw_only=True)
-class OutputState:
-    """Lo que Hermes nos entrega: El Perfil Psicológico terminado."""
-    info: Optional[Dict[str, Any]]
+class Output:
+    """Agent output: SEC reasonings and final convergence."""
+    relevance: Optional[str] = field(default=None)
+    implication: Optional[str] = field(default=None)
+    coping: Optional[str] = field(default=None)
+    normative: Optional[str] = field(default=None)
+    convergence: Optional[Dict[str, Any]] = field(default=None)
+
 
 @dataclass(kw_only=True)
-class State(InputState):
-    """El flujo de conciencia completo del agente."""
-    messages: Annotated[List[BaseMessage], add_messages]
-    info: Optional[Dict[str, Any]] = field(default=None)
-    loop_step: int = field(default=0)
+class State(Input):
+    """Full internal state for the HERMES agent.
+
+    Each SEC maintains its own message history (isolated context)
+    and its own result. Results are shared: each SEC can read
+    the outputs of previous SECs.
+    """
+    # SEC outputs (shared across nodes)
+    relevance: Optional[str] = field(default=None)
+    implication: Optional[str] = field(default=None)
+    coping: Optional[str] = field(default=None)
+    normative: Optional[str] = field(default=None)
+    convergence: Optional[Dict[str, Any]] = field(default=None)
+
+    # Per-SEC message history (isolated context)
+    relevance_messages: Annotated[List[BaseMessage], add_messages] = field(default_factory=list)
+    implication_messages: Annotated[List[BaseMessage], add_messages] = field(default_factory=list)
+    coping_messages: Annotated[List[BaseMessage], add_messages] = field(default_factory=list)
+    normative_messages: Annotated[List[BaseMessage], add_messages] = field(default_factory=list)
+
+    # Per-SEC loop counters
+    relevance_loop: int = field(default=0)
+    implication_loop: int = field(default=0)
+    coping_loop: int = field(default=0)
+    normative_loop: int = field(default=0)
+
+    # Token usage accumulators (each node adds its tokens via reducer)
+    total_input_tokens: Annotated[int, add_tokens] = field(default=0)
+    total_output_tokens: Annotated[int, add_tokens] = field(default=0)

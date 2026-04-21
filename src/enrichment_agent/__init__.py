@@ -1,5 +1,6 @@
-"""Enrichment for a pre-defined schema."""
+"""Hermes"""
 
-from enrichment_agent.graph import graph
+from enrichment_agent.Graph import graph
 
 __all__ = ["graph"]
+ 

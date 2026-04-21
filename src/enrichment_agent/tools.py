@@ -1,74 +1,62 @@
-"""Tools for data enrichment.
+"""
+Tools for the Relevance node (SEC 1).
+Optimized for Groq free tier (30K TPM).
 
-This module contains functions that are directly exposed to the LLM as tools.
-These tools can be used for tasks such as web searching and scraping.
-Users can edit and extend these tools as needed.
+Two tools: search (general) and search_news (recent news).
+Both use search_depth="basic" for short NLP summaries.
+search_news is inactive by default — set USE_NEWS_SEARCH=True
+in Graph.py to enable it for real-time datasets.
 """
 
-import json
 from typing import Any, Optional, cast
 
-import aiohttp
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg
+from langchain_core.tools import InjectedToolArg, tool
 from langchain_tavily import TavilySearch
-from langgraph.prebuilt import InjectedState
 from typing_extensions import Annotated
 
 from enrichment_agent.configuration import Configuration
-from enrichment_agent.state import State
-from enrichment_agent.utils import init_model
 
 
+@tool
 async def search(
-    query: str, *, config: Annotated[RunnableConfig, InjectedToolArg]
+    query: str,
+    *,
+    config: Annotated[RunnableConfig, InjectedToolArg]
 ) -> Optional[list[dict[str, Any]]]:
-    """Query a search engine.
+    """General web search.
 
-    This function queries the web to fetch comprehensive, accurate, and trusted results. It's particularly useful
-    for answering questions about current events. Provide as much context in the query as needed to ensure high recall.
+    Useful for fact-checking, finding information about events, people, or topics.
     """
     configuration = Configuration.from_runnable_config(config)
-    wrapped = TavilySearch(max_results=configuration.max_search_results)
+    wrapped = TavilySearch(
+        max_results=configuration.max_search_results,
+        search_depth="basic",
+    )
     result = await wrapped.ainvoke({"query": query})
     return cast(list[dict[str, Any]], result)
 
 
-_INFO_PROMPT = """You are doing web research on behalf of a user. You are trying to find out this information:
-
-<info>
-{info}
-</info>
-
-You just scraped the following website: {url}
-
-Based on the website content below, jot down some notes about the website.
-
-<Website content>
-{content}
-</Website content>"""
-
-
-async def scrape_website(
-    url: str,
+@tool
+async def search_news(
+    query: str,
     *,
-    state: Annotated[State, InjectedState],
-    config: Annotated[RunnableConfig, InjectedToolArg],
-) -> str:
-    """Scrape and summarize content from a given URL.
+    config: Annotated[RunnableConfig, InjectedToolArg]
+) -> Optional[list[dict[str, Any]]]:
+    """Recent news search.
 
-    Returns:
-        str: A summary of the scraped content, tailored to the extraction schema.
+    Useful for finding current events or recent developments.
+    Activate via USE_NEWS_SEARCH=True in Graph.py.
     """
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            content = await response.text()
-
-    p = _INFO_PROMPT.format(
-        info=json.dumps(state.extraction_schema, indent=2),
-        url=url,
-        content=content[:40_000],
+    configuration = Configuration.from_runnable_config(config)
+    wrapped = TavilySearch(
+        max_results=configuration.max_search_results,
+        search_depth="basic",
+        topic="news",
+        time_range="week",
     )
-    raw_model = init_model(config)
-    result = await raw_model.ainvoke(p)
-    return str(result.content)
+    result = await wrapped.ainvoke({"query": query})
+    return cast(list[dict[str, Any]], result)
+
+
+__all__ = ["search", "search_news"]
