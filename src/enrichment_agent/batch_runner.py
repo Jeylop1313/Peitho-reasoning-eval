@@ -30,7 +30,7 @@ DATASET_PATH = "enrichment_agent/Datasets/SemEval_Dataset_Unido.xlsx"
 OUTPUT_FILE = "results_current.json"
 AVATAR = "Anglophone Twitter user"
 START_INDEX = 0
-MAX_COMMENTS = 11906
+MAX_COMMENTS = 1
 
 VALID_LABELS = {"positive", "negative", "neutral"}
 

@@ -17,17 +17,34 @@ from langgraph.prebuilt import ToolNode
 
 from enrichment_agent.State import (
     State,
-    Convergence,
+    ConvergenceSemEval2017,
+    ConvergenceTweetEval,
+    ConvergenceSemEval2018,
 )
 from enrichment_agent.relevance import RELEVANCE_PROMPT
 from enrichment_agent.implications import IMPLICATIONS_PROMPT
 from enrichment_agent.coping import COPING_PROMPT
 from enrichment_agent.normative import NORMATIVE_PROMPT
-from enrichment_agent.converge_prompt import CONVERGENCE_PROMPT
+from enrichment_agent.converge_semeval2017 import CONVERGENCE_PROMPT as CONVERGENCE_PROMPT_SEMEVAL2017
+from enrichment_agent.converge_tweeteval import CONVERGENCE_PROMPT as CONVERGENCE_PROMPT_TWEETEVAL
+from enrichment_agent.converge_semeval2018 import CONVERGENCE_PROMPT as CONVERGENCE_PROMPT_SEMEVAL2018
 
 from enrichment_agent.configuration import Configuration
 from enrichment_agent.tools import search_news, search
 from enrichment_agent.utils import init_model
+
+
+# ============================================================
+# CONVERGENCE VARIANTS (one per dataset)
+# ============================================================
+CONVERGENCE_VARIANTS = {
+    "semeval2017": (CONVERGENCE_PROMPT_SEMEVAL2017, ConvergenceSemEval2017),
+    "tweeteval":   (CONVERGENCE_PROMPT_TWEETEVAL,   ConvergenceTweetEval),
+    "semeval2018": (CONVERGENCE_PROMPT_SEMEVAL2018, ConvergenceSemEval2018),
+}
+
+DEFAULT_CONVERGENCE_VARIANT = "semeval2017"
+
 
 # ============================================================
 # TOOLS
@@ -188,22 +205,37 @@ def route_after_normative(
     return "normative_node"
 
 
-# ============================================================
-# CONVERGENCE NODE
-# ============================================================
-
 async def convergence_node(
     state: State, *, config: Optional[RunnableConfig] = None
 ) -> Dict[str, Any]:
-    """Synthesize the 4 SEC outputs into a final sentiment label."""
+    """Synthesize the 4 SEC outputs into a final sentiment label.
+
+    Selects prompt + schema according to `convergence_variant` in the
+    RunnableConfig. Falls back to DEFAULT_CONVERGENCE_VARIANT if absent.
+    """
+
+    # Read variant from config (default: semeval2017)
+    variant = DEFAULT_CONVERGENCE_VARIANT
+    if config is not None:
+        variant = config.get("configurable", {}).get(
+            "convergence_variant", DEFAULT_CONVERGENCE_VARIANT
+        )
+
+    if variant not in CONVERGENCE_VARIANTS:
+        raise ValueError(
+            f"Unknown convergence_variant '{variant}'. "
+            f"Valid options: {list(CONVERGENCE_VARIANTS.keys())}"
+        )
+
+    convergence_prompt, convergence_schema = CONVERGENCE_VARIANTS[variant]
 
     convergence_tool = {
         "name": "ConvergenceInfo",
         "description": "Register your integrative synthesis of the 4 SECs.",
-        "parameters": Convergence.model_json_schema(),
+        "parameters": convergence_schema.model_json_schema(),
     }
 
-    p = CONVERGENCE_PROMPT.format(
+    p = convergence_prompt.format(
         comment=state.topic,
         Avatar=state.perfil_avatar,
         relevance=(state.relevance or "").replace("{", "{{").replace("}", "}}"),
@@ -222,7 +254,7 @@ async def convergence_node(
         for tool_call in response.tool_calls:
             if tool_call["name"] == "ConvergenceInfo":
                 result = tool_call["args"]
-                print("Convergence completed")
+                print(f"Convergence completed (variant: {variant})")
                 break
 
     input_tok, output_tok = _extract_tokens(response)

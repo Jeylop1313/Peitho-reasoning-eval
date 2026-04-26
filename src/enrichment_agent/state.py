@@ -28,21 +28,44 @@ def add_tokens(current: int, new: int) -> int:
     return current + new
 
 
-# ============================================================
+## ============================================================
 # REGISTRIES
 # ============================================================
 
-class Convergence(BaseModel):
-    """Sentiment classifier — integrates the 4 SEC reasonings into a final label."""
+class ConvergenceSemEval2017(BaseModel):
+    """Sentiment classifier (SemEval-2017 Task 4A) — ternary."""
     sentiment_label: Literal["positive", "negative", "neutral"] = Field(
         ...,
-        description="Final sentiment classification derived from the integrated CPM appraisal across all 4 SECs."
+        description="Final sentiment classification (SemEval-2017 ternary taxonomy)."
     )
     reasoning: str = Field(
         ..., max_length=1500,
         description="Justification connecting the 4 SEC appraisals to the final sentiment label."
     )
 
+
+class ConvergenceTweetEval(BaseModel):
+    """Emotion classifier (TweetEval Emotion) — 4 classes."""
+    sentiment_label: Literal["anger", "joy", "optimism", "sadness"] = Field(
+        ...,
+        description="Final emotion classification (TweetEval 4-class taxonomy)."
+    )
+    reasoning: str = Field(
+        ..., max_length=1500,
+        description="Justification connecting the 4 SEC appraisals to the final emotion label."
+    )
+
+
+class ConvergenceSemEval2018(BaseModel):
+    """Irony classifier (SemEval-2018 Task 3 Subtask A) — binary."""
+    sentiment_label: Literal["irony", "not_irony"] = Field(
+        ...,
+        description="Final irony classification (SemEval-2018 Task 3A binary taxonomy)."
+    )
+    reasoning: str = Field(
+        ..., max_length=1500,
+        description="Justification connecting the 4 SEC appraisals to the final irony label."
+    )
 
 # ============================================================
 # STATE
