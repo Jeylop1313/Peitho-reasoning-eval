@@ -1,7 +1,7 @@
 """
 HERMES — Batch Runner
 ========================
-Loads tweets from SemEval_Dataset_Unido.xlsx (SemEval-2017 Task 4A format),
+Loads tweets from TASS2019_country_PE_train.xml (TASS 2019 Perú format),
 runs the full pipeline (4 SECs + Convergence) on each tweet,
 and saves results progressively to JSON.
 
@@ -16,8 +16,8 @@ import asyncio
 import json
 import os
 import time
+import xml.etree.ElementTree as ET
 
-import openpyxl
 from dotenv import load_dotenv
 from enrichment_agent.Graph import graph
 
@@ -26,16 +26,22 @@ load_dotenv()
 # ============================================================
 # CONFIGURATION
 # ============================================================
-DATASET_PATH = "enrichment_agent/Datasets/SemEval_Dataset_Unido.xlsx"
-OUTPUT_FILE = "results_current.json"
-AVATAR = "Anglophone Twitter user"
+DATASET_PATH = "enrichment_agent/Datasets/TASS2019_country_PE_train.xml"
+OUTPUT_FILE = "results_tass2019PE.json"
+AVATAR = "Usuario hispanohablante de Twitter, Perú"
 START_INDEX = 0
-MAX_COMMENTS = 1
+MAX_COMMENTS = None
 
-VALID_LABELS = {"positive", "negative", "neutral"}
+VALID_LABELS = {"P", "N", "NEU", "NONE"}
 
 MAX_RETRIES = 3
 BASE_DELAY = 2  # seconds, doubles each retry
+
+CONVERGENCE_CONFIG = {
+    "configurable": {
+        "convergence_variant": "tass2019PE"
+    }
+}
 
 
 # ============================================================
@@ -47,20 +53,21 @@ def load_comments(
     start: int = 0,
     limit: int | None = None,
 ) -> list[dict]:
-    """Load tweets from the unified Excel dataset.
+    """Load tweets from TASS2019 XML dataset.
 
-    Expected columns: tweet_id, gold_label, tweet_text.
+    Expected fields: tweetid, content, sentiment/polarity/value.
     """
-    wb = openpyxl.load_workbook(path, read_only=True)
-    ws = wb.active
+    tree = ET.parse(path)
+    root = tree.getroot()
 
     comments = []
-    for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+    for i, tweet in enumerate(root.findall("tweet")):
         if i < start:
             continue
 
-        tweet_id, gold_label, tweet_text = row
-        gold_label = str(gold_label).strip().lower()
+        tweet_id = tweet.findtext("tweetid", "").strip()
+        text = tweet.findtext("content", "").strip()
+        gold_label = tweet.findtext("sentiment/polarity/value", "").strip().upper()
 
         if gold_label not in VALID_LABELS:
             print(f"Skipping row {i}: unknown label '{gold_label}'")
@@ -68,15 +75,14 @@ def load_comments(
 
         comments.append({
             "index": i,
-            "tweet_id": str(tweet_id),
+            "tweet_id": tweet_id,
             "gold_label": gold_label,
-            "text": str(tweet_text).strip(),
+            "text": text,
         })
 
         if limit and len(comments) >= limit:
             break
 
-    wb.close()
     return comments
 
 
@@ -113,10 +119,10 @@ async def invoke_with_retry(topic: str, avatar: str) -> dict:
     """Call graph.ainvoke with exponential backoff on retryable errors."""
     for attempt in range(MAX_RETRIES + 1):
         try:
-            return await graph.ainvoke({
-                "topic": topic,
-                "perfil_avatar": avatar,
-            })
+            return await graph.ainvoke(
+                {"topic": topic, "perfil_avatar": avatar},
+                config=CONVERGENCE_CONFIG,
+            )
         except Exception as e:
             if attempt < MAX_RETRIES and _is_retryable(e):
                 delay = BASE_DELAY * (2 ** attempt)
