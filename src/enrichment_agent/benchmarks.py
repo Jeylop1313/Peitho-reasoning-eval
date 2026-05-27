@@ -1,7 +1,7 @@
 """
 HERMES — Error Diagnostics & Benchmarks
 ==========================================
-SemEval-2017 Task 4A — 3 classes: positive, negative, neutral
+TASS 2019 Perú — 4 classes: P, N, NEU, NONE
 
 Metrics (in order of priority):
   AvgRec, Macro-F1, F1^PN, Accuracy, Micro-F1
@@ -9,7 +9,7 @@ Metrics (in order of priority):
 Auto-detects ablation (sec_output) vs full pipeline (4 SECs) format.
 
 Usage:
-    python benchmarks.py [results.json] [output_dir]
+    python benchmarks_tass2019PE.py [results.json] [output_dir]
 """
 
 import json
@@ -21,13 +21,14 @@ from collections import Counter
 # CONFIG
 # ============================================================
 
-LABELS = ["positive", "negative", "neutral"]
-POLAR_LABELS = ["positive", "negative"]
+LABELS = ["P", "N", "NEU", "NONE"]
+POLAR_LABELS = ["P", "N"]
 
 LABEL_MAP = {
-    "positive": "Positive",
-    "negative": "Negative",
-    "neutral": "Neutral",
+    "P": "Positivo",
+    "N": "Negativo",
+    "NEU": "Neutral",
+    "NONE": "Sin sentimiento",
 }
 
 
@@ -39,11 +40,11 @@ def extract_pred(item):
     conv = item.get("convergence")
     if not conv or "sentiment_label" not in conv:
         return None
-    return conv["sentiment_label"].lower().strip()
+    return conv["sentiment_label"].strip().upper()
 
 
 def extract_gold(item):
-    gold = item.get("gold_label", "").lower().strip()
+    gold = item.get("gold_label", "").strip().upper()
     return gold if gold in LABELS else None
 
 
@@ -57,7 +58,7 @@ def detect_format(item):
 
 
 def compute_metrics(items):
-    """Compute all SemEval-2017 Task 4A metrics.
+    """Compute all metrics.
 
     Returns: stats, avg_rec, macro_f1, f1_pn, accuracy, micro_f1
     """
@@ -128,31 +129,31 @@ def format_trace(item):
         lines.append("")
 
     else:
-        lines.append("#### SEC 1 — RELEVANCE")
+        lines.append("#### SEC 1 — RELEVANCIA")
         lines.append("")
         lines.append((item.get("relevance") or "[no output]").strip())
         lines.append("")
 
-        lines.append("#### SEC 2 — IMPLICATION")
+        lines.append("#### SEC 2 — IMPLICACIÓN")
         lines.append("")
         lines.append((item.get("implication") or "[no output]").strip())
         lines.append("")
 
-        lines.append("#### SEC 3 — COPING")
+        lines.append("#### SEC 3 — AFRONTAMIENTO")
         lines.append("")
         lines.append((item.get("coping") or "[no output]").strip())
         lines.append("")
 
-        lines.append("#### SEC 4 — NORMATIVE")
+        lines.append("#### SEC 4 — NORMATIVO")
         lines.append("")
         lines.append((item.get("normative") or "[no output]").strip())
         lines.append("")
 
-    lines.append("#### CONVERGENCE")
+    lines.append("#### CONVERGENCIA")
     lines.append("")
     conv = item.get("convergence")
     if conv:
-        lines.append(f"**Label:** {conv.get('sentiment_label', '?')}")
+        lines.append(f"**Etiqueta:** {conv.get('sentiment_label', '?')}")
         lines.append("")
         lines.append(conv.get("reasoning", "[no reasoning]").strip())
     else:
@@ -164,8 +165,8 @@ def format_trace(item):
 
 def write_metrics_table(lines, avg_rec, macro_f1, f1_pn, accuracy, micro_f1):
     """Append a metrics table to the summary lines."""
-    lines.append("| Metric | Value |")
-    lines.append("|--------|-------|")
+    lines.append("| Métrica | Valor |")
+    lines.append("|---------|-------|")
     lines.append(f"| AvgRec | {avg_rec:.4f} |")
     lines.append(f"| Macro-F1 | {macro_f1:.4f} |")
     lines.append(f"| F1^PN | {f1_pn:.4f} |")
@@ -181,14 +182,14 @@ def write_metrics_table(lines, avg_rec, macro_f1, f1_pn, accuracy, micro_f1):
 def find_latest_results():
     import glob
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    pattern = os.path.join(script_dir, "results_*.json")
+    pattern = os.path.join(script_dir, "results_tass2019PE*.json")
     files = glob.glob(pattern)
     if not files:
         parent_dir = os.path.dirname(script_dir)
-        pattern = os.path.join(parent_dir, "results_*.json")
+        pattern = os.path.join(parent_dir, "results_tass2019PE*.json")
         files = glob.glob(pattern)
     if not files:
-        print("No results_*.json file found")
+        print("No results_tass2019PE*.json file found")
         sys.exit(1)
     files.sort()
     return files[-1]
@@ -204,7 +205,7 @@ def main():
     else:
         input_path = find_latest_results()
 
-    output_dir = sys.argv[2] if len(sys.argv) > 2 else "diagnostics_output"
+    output_dir = sys.argv[2] if len(sys.argv) > 2 else "diagnostics_output_tass2019PE"
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"File: {os.path.basename(input_path)}")
@@ -254,23 +255,23 @@ def main():
     # ── Write summary.md ────────────────────────────────────
     summary_lines = []
     fmt_label = "Ablation (1 SEC)" if fmt == "ablation" else "Full Pipeline (4 SECs)"
-    summary_lines.append(f"# HERMES — Error Diagnostics ({fmt_label})")
+    summary_lines.append(f"# HERMES — Error Diagnostics TASS 2019 PE ({fmt_label})")
     summary_lines.append("")
     summary_lines.append(f"**File:** `{os.path.basename(input_path)}`  ")
     summary_lines.append(f"**Format:** {fmt_label}  ")
-    summary_lines.append(f"**Classes:** positive, negative, neutral  ")
+    summary_lines.append(f"**Classes:** P, N, NEU, NONE  ")
     summary_lines.append(f"**Total evaluated:** {len(evaluated)} (skipped: {skipped})  ")
     summary_lines.append(f"**Correct:** {sum(1 for it in evaluated if it['_correct'])}  ")
     summary_lines.append(f"**Errors:** {sum(1 for it in evaluated if not it['_correct'])}  ")
     summary_lines.append("")
 
-    summary_lines.append("## Metrics")
+    summary_lines.append("## Métricas")
     summary_lines.append("")
     write_metrics_table(summary_lines, avg_rec, macro_f1, f1_pn, accuracy, micro_f1)
 
-    summary_lines.append("## Per-Class Metrics")
+    summary_lines.append("## Métricas por Clase")
     summary_lines.append("")
-    summary_lines.append("| Class | Precision | Recall | F1 | Gold | Pred |")
+    summary_lines.append("| Clase | Precisión | Recall | F1 | Gold | Pred |")
     summary_lines.append("|-------|-----------|--------|----|------|------|")
     for cls in LABELS:
         s = stats[cls]
@@ -280,7 +281,7 @@ def main():
         )
     summary_lines.append("")
 
-    summary_lines.append("## Confusion Matrix")
+    summary_lines.append("## Matriz de Confusión")
     summary_lines.append("")
     header = "| Gold \\ Pred | " + " | ".join(LABEL_MAP[l] for l in LABELS) + " |"
     sep = "|------------|" + "|".join("-------:" for _ in LABELS) + "|"
@@ -292,10 +293,10 @@ def main():
         summary_lines.append(f"| {g} | {' | '.join(row)} |")
     summary_lines.append("")
 
-    summary_lines.append("## Error Distribution")
+    summary_lines.append("## Distribución de Errores")
     summary_lines.append("")
-    summary_lines.append("| Pattern | Count | % of Total Errors | File |")
-    summary_lines.append("|---------|-------|------------------:|------|")
+    summary_lines.append("| Patrón | Count | % del Total | Archivo |")
+    summary_lines.append("|--------|-------|------------:|---------|")
     total_errors = sum(len(v) for v in error_groups.values())
     for key in sorted(error_groups.keys(), key=lambda k: -len(error_groups[k])):
         n = len(error_groups[key])
@@ -304,7 +305,7 @@ def main():
         summary_lines.append(f"| {key} | {n} | {pct:.1f}% | `{fname}` |")
     summary_lines.append("")
 
-    # Resource usage (tokens + time)
+    # Resource usage
     total_input_tok = sum(it.get("input_tokens", 0) for it in evaluated)
     total_output_tok = sum(it.get("output_tokens", 0) for it in evaluated)
     total_elapsed = sum(it.get("elapsed_seconds", 0) for it in evaluated)
@@ -315,14 +316,14 @@ def main():
         avg_output_tok = total_output_tok / n
         avg_elapsed = total_elapsed / n
 
-        summary_lines.append("## Resource Usage")
+        summary_lines.append("## Uso de Recursos")
         summary_lines.append("")
-        summary_lines.append("| Metric | Total | Avg per Tweet |")
-        summary_lines.append("|--------|------:|--------------:|")
+        summary_lines.append("| Métrica | Total | Promedio por Tweet |")
+        summary_lines.append("|---------|------:|-------------------:|")
         summary_lines.append(f"| Input tokens | {total_input_tok:,} | {avg_input_tok:,.0f} |")
         summary_lines.append(f"| Output tokens | {total_output_tok:,} | {avg_output_tok:,.0f} |")
         summary_lines.append(f"| Total tokens | {total_input_tok + total_output_tok:,} | {avg_input_tok + avg_output_tok:,.0f} |")
-        summary_lines.append(f"| Time (seconds) | {total_elapsed:,.1f} | {avg_elapsed:.1f} |")
+        summary_lines.append(f"| Tiempo (segundos) | {total_elapsed:,.1f} | {avg_elapsed:.1f} |")
         summary_lines.append("")
 
     with open(os.path.join(output_dir, "summary.md"), "w", encoding="utf-8") as f:
@@ -332,10 +333,10 @@ def main():
     for key, items in error_groups.items():
         fname = f"errors_{key_to_filename(key)}.md"
         lines = []
-        lines.append(f"# Errors: {key}")
+        lines.append(f"# Errores: {key}")
         lines.append("")
-        lines.append(f"**Total:** {len(items)} errors  ")
-        lines.append(f"**Pattern:** Gold={key.split('>')[0]}, Predicted={key.split('>')[1]}  ")
+        lines.append(f"**Total:** {len(items)} errores  ")
+        lines.append(f"**Patrón:** Gold={key.split('>')[0]}, Predicted={key.split('>')[1]}  ")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -350,16 +351,16 @@ def main():
 
     # ── Write correct_all.md ────────────────────────────────
     lines = []
-    lines.append("# Correct Classifications — All Cases")
+    lines.append("# Clasificaciones Correctas — Todos los casos")
     lines.append("")
     lines.append("---")
     lines.append("")
     for cls in LABELS:
         items = correct_groups.get(cls, [])
-        lines.append(f"## Class: {cls} ({len(items)} correct)")
+        lines.append(f"## Clase: {cls} ({len(items)} correctas)")
         lines.append("")
         for idx, item in enumerate(items, 1):
-            lines.append(f"### Correct {idx} — ID: {item.get('index', '?')}")
+            lines.append(f"### Correcto {idx} — ID: {item.get('index', '?')}")
             lines.append("")
             lines.append(format_trace(item))
             lines.append("---")
@@ -368,12 +369,12 @@ def main():
         f.write("\n".join(lines))
 
     # ── Print summary ───────────────────────────────────────
-    print(f"\nDiagnostics generated in: {output_dir}/")
+    print(f"\nDiagnóstico generado en: {output_dir}/")
     print(f"  summary.md")
     for key in sorted(error_groups.keys(), key=lambda k: -len(error_groups[k])):
         fname = f"errors_{key_to_filename(key)}.md"
-        print(f"  {fname} ({len(error_groups[key])} errors)")
-    print(f"  correct_all.md ({sum(len(v) for v in correct_groups.values())} correct)")
+        print(f"  {fname} ({len(error_groups[key])} errores)")
+    print(f"  correct_all.md ({sum(len(v) for v in correct_groups.values())} correctas)")
 
 
 if __name__ == "__main__":

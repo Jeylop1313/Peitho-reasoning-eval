@@ -26,7 +26,7 @@ load_dotenv()
 # ============================================================
 # CONFIGURATION
 # ============================================================
-DATASET_PATH = "enrichment_agent/Datasets/TASS2019_country_PE_train.xml"
+DATASET_PATH = "enrichment_agent/TASS2019_country_PE_train.xml"
 OUTPUT_FILE = "results_tass2019PE.json"
 AVATAR = "Usuario hispanohablante de Twitter, Perú"
 START_INDEX = 0
