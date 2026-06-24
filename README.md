@@ -1,10 +1,10 @@
-# HERMES: A Cognitive Agent with LLMs for Sentiment Classification and Interpretability in Social Media Sarcasm
+# PEITHO: A Cognitive Agent with LLMs for Sentiment Classification and Interpretability in Social Media Sarcasm
 
-HERMES (Heuristic Emotion Recognition through Modular Evaluative Synthesis) is a cognitive appraisal agent for sentiment classification grounded in Scherer's Component Process Model (CPM). It implements Theory-Driven Chain-of-Thought (TD-CoT) reasoning via a multi-stage pipeline built with LangGraph and Llama 4 Scout (via Groq).
+Peitho (Heuristic Emotion Recognition through Modular Evaluative Synthesis) is a cognitive appraisal agent for sentiment classification grounded in Scherer's Component Process Model (CPM). It implements Theory-Driven Chain-of-Thought (TD-CoT) reasoning via a multi-stage pipeline built with LangGraph and Llama 4 Scout (via Groq).
 
 ## Architecture
 
-HERMES processes each tweet through 4 sequential Stimulus Evaluation Checks (SECs), followed by a convergence node that produces the final sentiment label:
+Peitho processes each tweet through 4 sequential Stimulus Evaluation Checks (SECs), followed by a convergence node that produces the final sentiment label:
 
 ```
 Relevance ⇄ Tools → Implication → Coping → Normative → Convergence → END
@@ -50,8 +50,8 @@ src/enrichment_agent/
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/Jeylop13/Hermes.git
-cd Hermes
+git clone https://github.com/Jeylop13/Peitho.git
+cd Peitho
 pip install -e .
 ```
 
