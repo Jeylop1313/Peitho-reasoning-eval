@@ -93,14 +93,10 @@ Responde ÚNICAMENTE con un objeto JSON en este formato exacto, nada más:
 
 Tweet: {tweet}
 
-Piensa paso a paso antes de responder:
-1. ¿Cuál es el significado literal del tweet?
-2. ¿Hay señales lingüísticas que indiquen que el tono del autor difiere del significado literal (p. ej. sarcasmo, ironía, exageración)?
-3. ¿Cuál es la postura evaluativa real del autor hacia el tema?
-4. Basándote en tu razonamiento, ¿cuál es la clasificación final?
-
-Después de razonar, responde ÚNICAMENTE con un objeto JSON en este formato exacto, nada más:
+Después de tu razonamiento, responde ÚNICAMENTE con un objeto JSON válido en este formato exacto:
 {fmt}
+
+Pensemos paso a paso.
 """
 
     else:
