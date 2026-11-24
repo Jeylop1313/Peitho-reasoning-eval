@@ -178,3 +178,6 @@ src/diagnostics_output/*
 
 # Sistema Windows
 Thumbs.db
+
+# LangGraph dev server state
+.langgraph_api/
